@@ -22,7 +22,7 @@ Implementation is based on the examples from:
 				query="SELECT ID, NAME, TYPE FROM MY_TABLE"
 				processor="SqlEntityProcessor"
 				cacheImpl="de.medicalcolumbus.platform.solr.dih.BerkleyBackedCache"
-				persistCacheName="CHILD"
+				persistCacheName="CHILD_CACHE_NAME"
 				persistCachePartitionNumber="0"
 				cachePk="id"
 				cacheLookup="PARENT.id"

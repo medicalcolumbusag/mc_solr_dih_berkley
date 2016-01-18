@@ -6,7 +6,7 @@
 	<parent>
 		<groupId>de.medicalcolumbus.platform</groupId>
 		<artifactId>mc-platform</artifactId>
-		<version>1.14.0</version>
+		<version>1.14.1</version>
 	</parent>
 
 	<artifactId>mc-solr-dih-berkley</artifactId>
@@ -34,7 +34,7 @@
 		<dependency>
 			<groupId>com.sleepycat</groupId>
 			<artifactId>je</artifactId>
-			<version>5.0.73</version> <!-- TODO : move version to mc_platform-->
+			<version>${com.sleepycat.je.version}</version>
 		</dependency>
 	</dependencies>
 
