@@ -1082,6 +1082,10 @@ public class BerkleyBackedCache implements DIHCache {
 		@SuppressWarnings("unchecked")
 		@Override
 		public void objectToEntry(Object obj, TupleOutput to) {
+			if (types == null) {
+				return;
+			}
+
 			if (obj instanceof List) {
 				if (((List) obj).size() > 1) {
 					LOG.warn("Discarding duplicated primary keys: " + obj);
