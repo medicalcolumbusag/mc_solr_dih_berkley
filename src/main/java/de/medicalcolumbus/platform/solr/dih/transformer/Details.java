@@ -17,7 +17,7 @@ public class Details {
 
 	private void addLocalizedField(Map<String, Object> row, String locale, String fieldName, String columnName) {
 		if (row.get(columnName) != null) {
-			row.put(fieldName + "_ss", locale + "###" + row.get(columnName));
+			row.put(fieldName + "_mwt", locale + "###" + row.get(columnName));
 		}
 	}
 }
