@@ -1,30 +1,9 @@
 package de.medicalcolumbus.platform.solr.dih;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileWriter;
-import java.io.InputStream;
-import java.io.Reader;
-import java.io.Writer;
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.sql.Clob;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.regex.Pattern;
-
-import javax.sql.rowset.serial.SerialClob;
-
+import com.sleepycat.bind.tuple.TupleBinding;
+import com.sleepycat.bind.tuple.TupleInput;
+import com.sleepycat.bind.tuple.TupleOutput;
+import com.sleepycat.je.*;
 import org.apache.solr.handler.dataimport.CachePropertyUtil;
 import org.apache.solr.handler.dataimport.Context;
 import org.apache.solr.handler.dataimport.DIHCache;
@@ -32,66 +11,54 @@ import org.apache.solr.handler.dataimport.DIHCacheSupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.sleepycat.bind.tuple.TupleBinding;
-import com.sleepycat.bind.tuple.TupleInput;
-import com.sleepycat.bind.tuple.TupleOutput;
-import com.sleepycat.je.CacheMode;
-import com.sleepycat.je.Cursor;
-import com.sleepycat.je.Database;
-import com.sleepycat.je.DatabaseConfig;
-import com.sleepycat.je.DatabaseEntry;
-import com.sleepycat.je.Environment;
-import com.sleepycat.je.EnvironmentConfig;
-import com.sleepycat.je.LockMode;
-import com.sleepycat.je.OperationStatus;
-import com.sleepycat.je.Transaction;
+import javax.sql.rowset.serial.SerialClob;
+import java.io.*;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.sql.Clob;
+import java.sql.SQLException;
+import java.util.*;
+import java.util.regex.Pattern;
 
 
 public class BerkleyBackedCache implements DIHCache {
-
-	private static final Logger LOG = LoggerFactory.getLogger(BerkleyBackedCache.class);
 
 	/**
 	 * +   * <p>
 	 * +   * Specify BDB-JEs internal cache eviction policy: DEFAULT, EVICT_LN or
 	 * +   * EVICT_BIN
-	 * +   * </p>
+	 * +   *
 	 * +
 	 */
 	public static final String BERKLEY_EVICT_POLICY = "berkleyInternalEvictPolicy";
-
 	/**
 	 * +   * <p>
 	 * +   * Specify "true" if this cache should share its internal cache with all other
 	 * +   * open BerkleyBackedCaches (that also specify shared=true)
-	 * +   * </p>
+	 * +   *
 	 * +
 	 */
 	public static final String BERKLEY_SHARED = "berkleyInternalShared";
-
 	/**
 	 * +   * <p>
 	 * +   * Set the # of bytes to allow for second-level internal caching. This is a
 	 * +   * performance-tuning parameter.
-	 * +   * </p>
+	 * +   *
 	 * +
 	 */
 	public static final String BERKLEY_INTERNAL_CACHE_SIZE = "berkleyInternalCacheSize";
-
 	/**
-	 * +   * <p>
-	 * +   * Specify "true" if this cache will be accessed by multiple threads (using
-	 * +   * DIH "threads" parameter), in one of these situations:
-	 * +   * <ul>
-	 * +   * <li>the cache is used by a DIHCacheProcessor with the DIH Root Entity</li>
-	 * +   * <li>the cache is a used by a non-keyed entity processor (ex:
-	 * +   * SQLEntityProcessor without a "where" clause)</li>
-	 * +   * </ul>
-	 * +   * </p>
-	 * +
+	 * <p>
+	 * Specify "true" if this cache will be accessed by multiple threads (using
+	 * DIH "threads" parameter), in one of these situations:
+	 * <ul>
+	 * <li>the cache is used by a DIHCacheProcessor with the DIH Root Entity</li>
+	 * <li>the cache is a used by a non-keyed entity processor (ex:
+	 * SQLEntityProcessor without a "where" clause)</li>
+	 * </ul>
 	 */
 	public static final String BERKLEY_TRANSACTIONAL = "berkleyTransactional";
-
+	private static final Logger LOG = LoggerFactory.getLogger(BerkleyBackedCache.class);
 	private static final String CACHE_PROP_FOR_NAMES = "CACHE_NAMES";
 	private static final String CACHE_PROP_FOR_TYPES = "CACHE_TYPES";
 
@@ -702,120 +669,6 @@ public class BerkleyBackedCache implements DIHCache {
 		return new BerkleyBackedCacheIterator();
 	}
 
-	class BerkleyBackedCacheIterator implements Iterator<Map<String, Object>> {
-		private Cursor orderedCursor = null;
-		private Transaction cursorTransaction = null;
-		private List<Map<String, Object>> currentKeysData = null;
-		private Iterator<Map<String, Object>> currentKeysIterator = null;
-		private Map<String, Object> next = null;
-		private boolean closed = false;
-
-		public BerkleyBackedCacheIterator() {
-
-		}
-
-		private void close() {
-			if (closed) {
-				return;
-			}
-			if (orderedCursor != null) {
-				try {
-					orderedCursor.close();
-				} catch (Exception e) {
-					LOG.warn("couldn't close cursor for cache iterator: " + cacheName);
-				}
-				if (transactional) {
-					try {
-						cursorTransaction.commit();
-					} catch (Exception e) {
-						LOG.warn("couldn't close transaction for cache iterator: "
-								+ cacheName);
-					}
-				}
-				orderedCursor = null;
-				cursorTransaction = null;
-			}
-			closed = true;
-		}
-
-		@Override
-		public boolean hasNext() {
-			checkOpen();
-
-			if (closed) {
-				return false;
-			}
-
-			if (next != null) {
-				return true;
-			}
-
-			if (orderedCursor == null) {
-				if (transactional) {
-					cursorTransaction = env.beginTransaction(null, null);
-				} else {
-					cursorTransaction = null;
-				}
-				orderedCursor = db.openCursor(cursorTransaction, null);
-			}
-
-			long start = System.nanoTime();
-
-			try {
-				if (currentKeysData != null && currentKeysIterator.hasNext()) {
-					next = currentKeysIterator.next();
-					return true;
-				} else {
-					OperationStatus retVal = null;
-					if (retVal == null || retVal == OperationStatus.SUCCESS) {
-						DatabaseEntry theKey = new DatabaseEntry();
-						DatabaseEntry theData = new DatabaseEntry();
-						retVal = orderedCursor.getNext(theKey, theData, LockMode.DEFAULT);
-						if (retVal == OperationStatus.SUCCESS) {
-							currentKeysData = parseData(theKey, theData);
-							currentKeysIterator = currentKeysData.iterator();
-							totalTimeNano += (System.nanoTime() - start);
-							next = currentKeysIterator.next();
-							return true;
-						}
-					}
-				}
-				close();
-				return false;
-			} catch (IllegalStateException e) {
-				if (e.toString().toLowerCase().contains("thread")) {
-					throw new RuntimeException("If using multiple threads, you must set "
-							+ BERKLEY_TRANSACTIONAL + " to true.", e);
-				} else {
-					throw new RuntimeException(e);
-				}
-			} catch (Exception e) {
-				throw new RuntimeException(e);
-			}
-		}
-
-		private void checkOpen() {
-			if (env == null) {
-				throw new IllegalStateException("The underlying cache is not open.");
-			}
-		}
-
-		@Override
-		public Map<String, Object> next() {
-			if (hasNext()) {
-				Map<String, Object> nextObj = next;
-				next = null;
-				return nextObj;
-			}
-			return null;
-		}
-
-		@Override
-		public void remove() {
-			throw new UnsupportedOperationException();
-		}
-	}
-
 	private int getColumnIndex(String name) {
 		for (int i = 0; i < columns.length; i++) {
 			if (name.equalsIgnoreCase(columns[i])) {
@@ -970,6 +823,120 @@ public class BerkleyBackedCache implements DIHCache {
 				returnObj = ti.readString();
 		}
 		return returnObj;
+	}
+
+	class BerkleyBackedCacheIterator implements Iterator<Map<String, Object>> {
+		private Cursor orderedCursor = null;
+		private Transaction cursorTransaction = null;
+		private List<Map<String, Object>> currentKeysData = null;
+		private Iterator<Map<String, Object>> currentKeysIterator = null;
+		private Map<String, Object> next = null;
+		private boolean closed = false;
+
+		public BerkleyBackedCacheIterator() {
+
+		}
+
+		private void close() {
+			if (closed) {
+				return;
+			}
+			if (orderedCursor != null) {
+				try {
+					orderedCursor.close();
+				} catch (Exception e) {
+					LOG.warn("couldn't close cursor for cache iterator: " + cacheName);
+				}
+				if (transactional) {
+					try {
+						cursorTransaction.commit();
+					} catch (Exception e) {
+						LOG.warn("couldn't close transaction for cache iterator: "
+								+ cacheName);
+					}
+				}
+				orderedCursor = null;
+				cursorTransaction = null;
+			}
+			closed = true;
+		}
+
+		@Override
+		public boolean hasNext() {
+			checkOpen();
+
+			if (closed) {
+				return false;
+			}
+
+			if (next != null) {
+				return true;
+			}
+
+			if (orderedCursor == null) {
+				if (transactional) {
+					cursorTransaction = env.beginTransaction(null, null);
+				} else {
+					cursorTransaction = null;
+				}
+				orderedCursor = db.openCursor(cursorTransaction, null);
+			}
+
+			long start = System.nanoTime();
+
+			try {
+				if (currentKeysData != null && currentKeysIterator.hasNext()) {
+					next = currentKeysIterator.next();
+					return true;
+				} else {
+					OperationStatus retVal = null;
+					if (retVal == null || retVal == OperationStatus.SUCCESS) {
+						DatabaseEntry theKey = new DatabaseEntry();
+						DatabaseEntry theData = new DatabaseEntry();
+						retVal = orderedCursor.getNext(theKey, theData, LockMode.DEFAULT);
+						if (retVal == OperationStatus.SUCCESS) {
+							currentKeysData = parseData(theKey, theData);
+							currentKeysIterator = currentKeysData.iterator();
+							totalTimeNano += (System.nanoTime() - start);
+							next = currentKeysIterator.next();
+							return true;
+						}
+					}
+				}
+				close();
+				return false;
+			} catch (IllegalStateException e) {
+				if (e.toString().toLowerCase().contains("thread")) {
+					throw new RuntimeException("If using multiple threads, you must set "
+							+ BERKLEY_TRANSACTIONAL + " to true.", e);
+				} else {
+					throw new RuntimeException(e);
+				}
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}
+
+		private void checkOpen() {
+			if (env == null) {
+				throw new IllegalStateException("The underlying cache is not open.");
+			}
+		}
+
+		@Override
+		public Map<String, Object> next() {
+			if (hasNext()) {
+				Map<String, Object> nextObj = next;
+				next = null;
+				return nextObj;
+			}
+			return null;
+		}
+
+		@Override
+		public void remove() {
+			throw new UnsupportedOperationException();
+		}
 	}
 
 	class HeaderTupleBinding extends TupleBinding<String[]> {

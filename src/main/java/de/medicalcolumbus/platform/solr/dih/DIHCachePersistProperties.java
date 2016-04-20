@@ -5,58 +5,49 @@ public class DIHCachePersistProperties {
 	 * <p>
 	 * Specify the Cache Implementation to use
 	 * with {@link DIHCacheWriter} or {@link DIHCacheProcessor}.
-	 * </p>
 	 */
 	public static final String CACHE_IMPL = "persistCacheImpl";
 	/**
 	 * <p>
 	 * Specify the path to where the cache is to be saved on disk (if applicable)
-	 * </p>
 	 */
 	public static final String CACHE_BASE_DIRECTORY = "persistCacheBaseDir";
 	/**
 	 * <p>
 	 * Specify the Foreign Key from the parent entity to join on. Use if the cache
 	 * is on a child entity.
-	 * </p>
 	 */
 	public static final String CACHE_FOREIGN_KEY = "persistCacheLookup";
 	/**
 	 * <p>
 	 * Specify the Primary Key field from this Entity to map the input records
 	 * with
-	 * </p>
 	 */
 	public static final String CACHE_PRIMARY_KEY = "persistCachePk";
 	/**
 	 * <p>
 	 * The cache name. This should be unique across all cached entities, or
 	 * undefined behavior may result.
-	 * </p>
 	 */
 	public static final String CACHE_NAME = "persistCacheName";
 	/**
 	 * <p>
 	 * If the cache supports persistent data, set to "true" to delete any prior
 	 * persisted data before running the entity.
-	 * </p>
 	 */
 	public static final String CACHE_DELETE_PRIOR_DATA = "persistCacheDeletePriorData";
 	/**
 	 * <p>
 	 * If true, a pre-existing cache is re-opened for read-only access.
-	 * </p>
 	 */
 	public static final String CACHE_READ_ONLY = "persistCacheReadOnly";
 	/**
 	 * <p>
-	 * To be used with the DIHCacheWriter. If set >1, this specifies the number of
+	 * To be used with the DIHCacheWriter. If set &gt;1, this specifies the number of
 	 * cache partitions to create.
-	 * </p>
 	 * <p>
 	 * Caches are numbered beginning at 0. Each Document is placed in a Partition
 	 * based on: (Primary_Key.hashCode() % #Partitions)
-	 * </p>
 	 * <p>
 	 * There are two possible use cases:
 	 * <ul>
@@ -68,29 +59,24 @@ public class DIHCachePersistProperties {
 	 * the same Shard so as to take advantage of a multi-processor indexing
 	 * configuration</li>
 	 * </ul>
-	 * </p>
 	 * <p>
 	 * Note: This may not be supported by all cache implementations
-	 * </p>
 	 */
 	public static final String CACHE_PARTITIONS = "persistCachePartitions";
 	/**
 	 * <p>
 	 * To be used with the DIHCacheProcessor. If set, specifies the cache number
 	 * to access. See CACHE_PARTITIONS for information on creating partitions.
-	 * </p>
 	 */
 	public static final String PARTITION_NUMBER = "persistCachePartitionNumber";
 	/**
 	 * <p>
 	 * For use with the DIHCacheWriter.
-	 * </p>
 	 * <p>
 	 * If the cache supports duplicate keys, setting this to "true" disables this
 	 * ability for new additions. Specifically, this causes calls to
 	 * "DIHWriter.add(key)" to first delete any existing records with the
 	 * passed-in key, then add.
-	 * </p>
 	 * <p>
 	 * This is helpful:
 	 * <ul>
@@ -99,14 +85,12 @@ public class DIHCachePersistProperties {
 	 * desire only the last added document for each key to remain in the cache.</li>
 	 * <li>
 	 * If you are doing a delta update to the DIHCacheWriter using DIH parameters:
-	 * command=full-import&clean=false , this prevents the DIH Cache from having
+	 * command=full-import&amp;clean=false, this prevents the DIH Cache from having
 	 * to remember all re-written keys in memory. See
 	 * CACHE_DELTA_WITH_FULL_UPDATE_NO_CLEAN.</li>
 	 * </ul>
-	 * </p>
 	 * <p>
 	 * Default is "false".
-	 * </p>
 	 */
 	public static final String CACHE_NO_DUPLICATE_KEYS = "persistCacheNoDuplicateKeys";
 	/**
@@ -114,22 +98,19 @@ public class DIHCachePersistProperties {
 	 * Setting this to "true" allows the cache to perform certain optimizations if
 	 * calls to "add(key)" will be done in key-order. This is helpful when doing a
 	 * delta update to the DIHCacheWriter using DIH parameters:
-	 * command=full-Import&clean=false , and if CACHE_NO_DUPLICATE_KEYS cannot be
+	 * command=full-Import&amp;clean=false, and if CACHE_NO_DUPLICATE_KEYS cannot be
 	 * specified (because duplicates are required by the data). If the keys can be
 	 * guaranteed to arrive in key-order, the cache will not need to remember all
 	 * re-written keys in memory.
-	 * </p>
 	 * <p>
 	 * Default is "false".
-	 * </p>
 	 */
 	public static final String CACHE_ADDS_ARRIVE_IN_KEY_ORDER = "persistCacheAddsArriveInKeyOrder";
 	/**
 	 * <p>
 	 * For use with DIHCacheWriter and a Cache Implementation that writes
 	 * duplicate keys by default and doing a delta update with DIH parameters:
-	 * command=full-import&clean=false .
-	 * </p>
+	 * command=full-import&amp;clean=false.
 	 * <p>
 	 * Setting this to "true" instructs the cache to remember each re-written key
 	 * in memory such that the first cache call to "add(key)" for a particular key
@@ -137,7 +118,6 @@ public class DIHCachePersistProperties {
 	 * to "add(key)" for a particular key will result in an "add only" operation.
 	 * Failure to set this will result in the cache containing both the old and
 	 * new data.
-	 * </p>
 	 */
 	public static final String CACHE_DELTA_WITH_FULL_UPDATE_NO_CLEAN = "persistCacheDeltaWithFullUpdateNoClean";
 	/**
@@ -146,7 +126,6 @@ public class DIHCachePersistProperties {
 	 * necessary to specify this parameter if this is to be a newly-created cache
 	 * and the first row (or document) does not contain a non-null entry for every
 	 * field</b>
-	 * </p>
 	 */
 	public static final String FIELD_NAMES = "persistCacheFieldNames";
 	/**
@@ -154,7 +133,6 @@ public class DIHCachePersistProperties {
 	 * A comma-delimited list of field types. This should be specified with
 	 * fieldNames. See org.apache.solr.handler.dataimport.DIHCacheTypes for a list
 	 * of valid types
-	 * </p>
 	 */
 	public static final String FIELD_TYPES = "persistCacheFieldTypes";
 

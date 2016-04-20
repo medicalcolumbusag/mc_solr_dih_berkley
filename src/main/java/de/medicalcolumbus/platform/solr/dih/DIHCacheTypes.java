@@ -12,7 +12,6 @@ package de.medicalcolumbus.platform.solr.dih;
  * <li>CLOB - java.sql.Clob</li>
  * <li>NULL - all values will be NULLs</li>
  * </ul>
- * </p>
  */
 public enum DIHCacheTypes {
 	BYTE, SHORT, INTEGER, LONG, FLOAT, DOUBLE, BOOLEAN, CHARACTER, STRING, DATE, BIGINTEGER, BIGDECIMAL, BIGDECIMAL_INTEGER, CLOB, NULL
