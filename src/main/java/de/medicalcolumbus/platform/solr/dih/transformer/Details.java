@@ -3,6 +3,7 @@ package de.medicalcolumbus.platform.solr.dih.transformer;
 import java.util.Map;
 
 public class Details {
+
 	public Object transformRow(Map<String, Object> row) {
 		String locale = row.get("LOCALE").toString();
 

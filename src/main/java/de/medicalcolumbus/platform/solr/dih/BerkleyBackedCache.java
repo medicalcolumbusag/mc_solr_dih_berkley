@@ -103,59 +103,52 @@ public class BerkleyBackedCache implements DIHCache {
 	public void open(Context context) {
 		checkOpen(false);
 
-		baseLoc = CachePropertyUtil.getAttributeValueAsString(context,
-				DIHCachePersistProperties.CACHE_BASE_DIRECTORY);
+		baseLoc = CachePropertyUtil.getAttributeValueAsString(context, DIHCachePersistProperties.CACHE_BASE_DIRECTORY);
 		if (baseLoc == null) {
 			baseLoc = System.getProperty("java.io.tmpdir");
 		}
-		cacheName = CachePropertyUtil.getAttributeValueAsString(context,
-				DIHCachePersistProperties.CACHE_NAME);
+		cacheName = CachePropertyUtil.getAttributeValueAsString(context, DIHCachePersistProperties.CACHE_NAME);
 		if (cacheName == null) {
 			cacheName = "BerkleyBackedCache-" + System.currentTimeMillis();
 		}
-		String cacheDeletePriorData = CachePropertyUtil.getAttributeValueAsString(
-				context, DIHCacheSupport.CACHE_DELETE_PRIOR_DATA);
+		String cacheDeletePriorData = CachePropertyUtil.getAttributeValueAsString(context,
+				DIHCacheSupport.CACHE_DELETE_PRIOR_DATA);
 		if ("true".equalsIgnoreCase(cacheDeletePriorData)) {
 			destroy();
 		}
 		readOnly = false;
-		String cacheReadOnly = CachePropertyUtil.getAttributeValueAsString(context,
-				DIHCacheSupport.CACHE_READ_ONLY);
+		String cacheReadOnly = CachePropertyUtil.getAttributeValueAsString(context, DIHCacheSupport.CACHE_READ_ONLY);
 		if ("true".equalsIgnoreCase(cacheReadOnly)) {
 			readOnly = true;
 		}
 		transactional = false;
-		String cacheTransactional = CachePropertyUtil.getAttributeValueAsString(
-				context, BERKLEY_TRANSACTIONAL);
+		String cacheTransactional = CachePropertyUtil.getAttributeValueAsString(context, BERKLEY_TRANSACTIONAL);
 		if ("true".equalsIgnoreCase(cacheTransactional)) {
 			transactional = true;
 		}
+
 		rememberChangedKeys = false;
-		String rememberChangedKeysStr = CachePropertyUtil
-				.getAttributeValueAsString(context,
-						DIHCachePersistProperties.CACHE_DELTA_WITH_FULL_UPDATE_NO_CLEAN);
-		if ("true".equalsIgnoreCase(rememberChangedKeysStr)) {
+		if ("true".equalsIgnoreCase(
+				CachePropertyUtil.getAttributeValueAsString(context, DIHCachePersistProperties.CACHE_DELTA_WITH_FULL_UPDATE_NO_CLEAN))) {
 			rememberChangedKeys = true;
 			changedKeys = new HashSet<Object>();
 		}
+
 		changedKeysArriveInOrder = false;
-		String changedKeysArriveInOrderStr = CachePropertyUtil
-				.getAttributeValueAsString(context,
-						DIHCachePersistProperties.CACHE_ADDS_ARRIVE_IN_KEY_ORDER);
-		if ("true".equalsIgnoreCase(changedKeysArriveInOrderStr)) {
+		if ("true".equalsIgnoreCase(
+				CachePropertyUtil.getAttributeValueAsString(context, DIHCachePersistProperties.CACHE_ADDS_ARRIVE_IN_KEY_ORDER))) {
 			changedKeysArriveInOrder = true;
 		}
 		disableDuplicateAdds = false;
-		String disableDuplicateAddsStr = CachePropertyUtil
-				.getAttributeValueAsString(context,
-						DIHCachePersistProperties.CACHE_NO_DUPLICATE_KEYS);
-		if ("true".equalsIgnoreCase(disableDuplicateAddsStr)) {
+
+		if ("true".equalsIgnoreCase(
+				CachePropertyUtil.getAttributeValueAsString(context,
+						DIHCachePersistProperties.CACHE_NO_DUPLICATE_KEYS))) {
 			disableDuplicateAdds = true;
 			rememberChangedKeys = false;
 			changedKeys = null;
 		}
-		String bep = CachePropertyUtil.getAttributeValueAsString(context,
-				BERKLEY_EVICT_POLICY);
+		String bep = CachePropertyUtil.getAttributeValueAsString(context, BERKLEY_EVICT_POLICY);
 		if ("EVICT_LN".equals(bep)) {
 			cacheMode = CacheMode.EVICT_LN;
 		} else if ("EVICT_BIN".equals(bep)) {
@@ -163,16 +156,16 @@ public class BerkleyBackedCache implements DIHCache {
 		} else {
 			cacheMode = CacheMode.DEFAULT;
 		}
-		String bsh = CachePropertyUtil.getAttributeValueAsString(context,
-				BERKLEY_SHARED);
+
+		String bsh = CachePropertyUtil.getAttributeValueAsString(context, BERKLEY_SHARED);
+
 		if ("true".equalsIgnoreCase(bsh)) {
 			sharedCache = true;
 		} else {
 			sharedCache = false;
 		}
 
-		String cics = CachePropertyUtil.getAttributeValueAsString(context,
-				BERKLEY_INTERNAL_CACHE_SIZE);
+		String cics = CachePropertyUtil.getAttributeValueAsString(context, BERKLEY_INTERNAL_CACHE_SIZE);
 		if (cics != null) {
 			try {
 				internalCacheSize = Long.parseLong(cics);
