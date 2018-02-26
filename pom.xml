@@ -10,7 +10,7 @@
 	</parent>
 
 	<artifactId>mc-solr-dih-berkley</artifactId>
-	<version>1.2.4</version>
+	<version>0.0.2906-SNAPSHOT</version>
 	<name>mc-solr-dih-berkley</name>
 	<packaging>jar</packaging>
 
