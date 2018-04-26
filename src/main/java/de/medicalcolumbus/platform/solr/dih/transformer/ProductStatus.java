@@ -1,6 +1,6 @@
 package de.medicalcolumbus.platform.solr.dih.transformer;
 
-public class ProductStatus extends Translation {
+public class ProductStatus extends Dictionary {
 
 	private static final String PRODUCT_STATUS_TXT = "product_status_";
 
