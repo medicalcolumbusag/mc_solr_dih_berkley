@@ -67,6 +67,7 @@ public class MapDbCache implements DIHCache {
 	public void flush() {
 		checkOpen(true);
 		checkReadOnly();
+		dbMemory.commit();
 	}
 
 	@Override
