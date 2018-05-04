@@ -2,6 +2,9 @@ package de.medicalcolumbus.platform.solr.dih.transformer;
 
 import java.util.Map;
 
+/**
+ * TODO: remove this class and replace with Dictionary when all the cores will be refactored
+ */
 public abstract class Translation {
 
 	private static final String LANGUAGE = "LANGUAGE";

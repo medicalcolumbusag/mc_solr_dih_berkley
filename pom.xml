@@ -3,12 +3,8 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
          xmlns="http://maven.apache.org/POM/4.0.0">
 	<modelVersion>4.0.0</modelVersion>
-	<parent>
-		<groupId>de.medicalcolumbus.platform</groupId>
-		<artifactId>mc-platform</artifactId>
-		<version>1.15.0</version>
-	</parent>
 
+	<groupId>de.medicalcolumbus.platform</groupId>
 	<artifactId>mc-solr-dih-berkley</artifactId>
 	<version>0.0.3029-SNAPSHOT</version>
 	<name>mc-solr-dih-berkley</name>
@@ -22,19 +18,19 @@
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-api</artifactId>
-			<version>${slf4j.version}</version>
+			<version>1.7.7</version>
 		</dependency>
 
 		<dependency>
 			<groupId>org.apache.solr</groupId>
 			<artifactId>solr-dataimporthandler</artifactId>
-			<version>${solr.version}</version>
+			<version>6.2.1</version>
 		</dependency>
 
 		<dependency>
 			<groupId>com.sleepycat</groupId>
 			<artifactId>je</artifactId>
-			<version>${com.sleepycat.je.version}</version>
+			<version>5.0.73</version>
 		</dependency>
 
 		<!-- https://mvnrepository.com/artifact/org.mapdb/mapdb -->
@@ -60,6 +56,8 @@
 				<artifactId>maven-compiler-plugin</artifactId>
 				<configuration>
 					<compilerArguments combine.self="override"/>
+					<source>1.7</source>
+					<target>1.7</target>
 				</configuration>
 			</plugin>
 			<plugin>
