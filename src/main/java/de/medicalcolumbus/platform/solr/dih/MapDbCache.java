@@ -6,6 +6,7 @@ import org.apache.solr.handler.dataimport.DIHCache;
 import org.apache.solr.handler.dataimport.DIHCacheSupport;
 import org.mapdb.*;
 
+import org.mapdb.serializer.SerializerCompressionWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,8 +20,8 @@ public class MapDbCache implements DIHCache {
 
 	private static final Logger LOG = LoggerFactory.getLogger(MapDbCache.class);
 
-	private HTreeMap inMemoryCache;
-	private HTreeMap onDiskCache;
+	private HTreeMap<Object, List<Map<String, Object>>> inMemoryCache;
+	private HTreeMap<Object, List<Map<String, Object>>> onDiskCache;
 
 	private String primaryKeyName = null;
 	private boolean isOpen = false;
@@ -31,6 +32,8 @@ public class MapDbCache implements DIHCache {
 	private DB dbMemory;
 	private String baseLocation;
 	private String cacheName;
+
+	private int expireStoreSize;
 
 
 	@Override
@@ -47,6 +50,9 @@ public class MapDbCache implements DIHCache {
 		if (isNull(cacheName)) {
 			cacheName = "MapDbCache_" + System.currentTimeMillis() + "_cache.db";
 		}
+
+		String expireStoreSize = CachePropertyUtil.getAttributeValueAsString(context, DIHCachePersistProperties.EXPIRE_STORE_SIZE);
+		this.expireStoreSize = !isNull(expireStoreSize) ? Integer.parseInt(expireStoreSize) : 16; // 16 GB default value
 
 		String readOnlyStr = CachePropertyUtil.getAttributeValueAsString(context,
 				DIHCacheSupport.CACHE_READ_ONLY);
@@ -253,20 +259,28 @@ public class MapDbCache implements DIHCache {
 
 		dbDisk = DBMaker
 				.fileDB(onDiskLocation)
+				.fileMmapEnable()
+				.fileMmapEnableIfSupported()
+				.fileMmapPreclearDisable()
+				.cleanerHackEnable()
 				.closeOnJvmShutdown()
 				.make();
 
 		dbMemory = DBMaker
-				.memoryDB()
+				.heapDB()
 				.closeOnJvmShutdown()
 				.make();
 
 		onDiskCache = dbDisk
 				.hashMap("onDisk_" + cacheName)
+				.keySerializer(dbDisk.getDefaultSerializer())
+				.valueSerializer(new SerializerCompressionWrapper<>(new ListSerializer<>(new MapSerializer())))
 				.create();
 
 		inMemoryCache = dbMemory
 				.hashMap("inMemory_" + cacheName)
+				.keySerializer(dbMemory.getDefaultSerializer())
+				.valueSerializer(new SerializerCompressionWrapper<>(new ListSerializer<>(new MapSerializer())))
 				.expireStoreSize(16 * 1024*1024*1024)
 				.expireAfterCreate()
 				.expireOverflow(onDiskCache)

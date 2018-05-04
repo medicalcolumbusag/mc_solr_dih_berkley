@@ -136,4 +136,11 @@ public class DIHCachePersistProperties {
 	 */
 	public static final String FIELD_TYPES = "persistCacheFieldTypes";
 
+	/**
+	 * Value for maximum ram memory used by the in memory cache
+	 * before it overflows to disk. The value is an integer representing
+	 * the number of desired GB
+	 */
+	public static final String EXPIRE_STORE_SIZE = "expireStoreSize";
+
 }
