@@ -3,7 +3,9 @@ package de.medicalcolumbus.platform.solr.dih;
 import org.apache.solr.handler.dataimport.CachePropertyUtil;
 import org.apache.solr.handler.dataimport.Context;
 import org.apache.solr.handler.dataimport.DIHCache;
+import org.apache.solr.handler.dataimport.DIHCacheSupport;
 import org.mapdb.*;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,8 +19,8 @@ public class MapDbCache implements DIHCache {
 
 	private static final Logger LOG = LoggerFactory.getLogger(MapDbCache.class);
 
-	private HTreeMap<Object, Object> inMemoryCache;
-	private HTreeMap<Object, Object> onDiskCache;
+	private HTreeMap inMemoryCache;
+	private HTreeMap onDiskCache;
 
 	private String primaryKeyName = null;
 	private boolean isOpen = false;
@@ -40,9 +42,16 @@ public class MapDbCache implements DIHCache {
 		if (isNull(baseLocation)) {
 			baseLocation = System.getProperty("java.io.tmpdir");
 		}
+
 		cacheName = CachePropertyUtil.getAttributeValueAsString(context, DIHCachePersistProperties.CACHE_NAME);
 		if (isNull(cacheName)) {
-			cacheName = "MapDbCache-" + System.currentTimeMillis();
+			cacheName = "MapDbCache_" + System.currentTimeMillis() + "_cache.db";
+		}
+
+		String readOnlyStr = CachePropertyUtil.getAttributeValueAsString(context,
+				DIHCacheSupport.CACHE_READ_ONLY);
+		if ("true".equalsIgnoreCase(readOnlyStr)) {
+			isReadOnly = true;
 		}
 
 		init();
@@ -241,10 +250,6 @@ public class MapDbCache implements DIHCache {
 
 		String path = baseLocation + File.separator + cacheName;
 		File onDiskLocation = new File(path);
-		if (onDiskLocation.mkdirs()) {
-			LOG.error("Cache " + path + " not created on disk!");
-			throw new RuntimeException("Cache " + path + " not created on disk!");
-		}
 
 		dbDisk = DBMaker
 				.fileDB(onDiskLocation)
@@ -257,16 +262,12 @@ public class MapDbCache implements DIHCache {
 				.make();
 
 		onDiskCache = dbDisk
-				.hashMap("onDisk")
-				.keySerializer(dbDisk.getDefaultSerializer())
-				.valueSerializer(dbDisk.getDefaultSerializer())
+				.hashMap("onDisk_" + cacheName)
 				.create();
 
 		inMemoryCache = dbMemory
-				.hashMap("inMemory")
-				.keySerializer(dbMemory.getDefaultSerializer())
-				.valueSerializer(dbMemory.getDefaultSerializer())
-				.expireMaxSize(128)
+				.hashMap("inMemory_" + cacheName)
+				.expireStoreSize(16 * 1024*1024*1024)
 				.expireAfterCreate()
 				.expireOverflow(onDiskCache)
 				.expireExecutor(Executors.newScheduledThreadPool(2))
@@ -288,22 +289,4 @@ public class MapDbCache implements DIHCache {
 		}
 	}
 }
-
-//	checkOpen(false);
-//	isOpen = true;
-//    if (theMap == null) {
-//		theMap = new TreeMap<>();
-//	}
-//
-//	String pkName = CachePropertyUtil.getAttributeValueAsString(context,
-//			DIHCacheSupport.CACHE_PRIMARY_KEY);
-//    if (pkName != null) {
-//		primaryKeyName = pkName;
-//	}
-//	isReadOnly = false;
-//	String readOnlyStr = CachePropertyUtil.getAttributeValueAsString(context,
-//			DIHCacheSupport.CACHE_READ_ONLY);
-//    if ("true".equalsIgnoreCase(readOnlyStr)) {
-//		isReadOnly = true;
-//	}
 
