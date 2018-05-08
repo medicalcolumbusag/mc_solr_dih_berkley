@@ -257,6 +257,8 @@ public class MapDbCache implements DIHCache {
 		String path = baseLocation + File.separator + cacheName;
 		File onDiskLocation = new File(path);
 
+		//TODO @Luiza if an out of memory error occurs during testing comment all builder functions for Mmap like .fileMmapEnable() so RandomAccessFile is used as default
+
 		dbDisk = DBMaker
 				.fileDB(onDiskLocation)
 				.fileMmapEnable()
@@ -281,7 +283,7 @@ public class MapDbCache implements DIHCache {
 				.hashMap("inMemory_" + cacheName)
 				.keySerializer(dbMemory.getDefaultSerializer())
 				.valueSerializer(new SerializerCompressionWrapper<>(new ListSerializer<>(new MapSerializer())))
-				.expireStoreSize(16 * 1024*1024*1024)
+				.expireStoreSize(expireStoreSize * 1024*1024*1024)
 				.expireAfterCreate()
 				.expireOverflow(onDiskCache)
 				.expireExecutor(Executors.newScheduledThreadPool(2))
