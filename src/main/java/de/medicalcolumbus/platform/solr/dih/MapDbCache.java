@@ -267,7 +267,7 @@ public class MapDbCache implements DIHCache {
 				.make();
 
 		dbMemory = DBMaker
-				.heapDB()
+				.memoryDB()
 				.closeOnJvmShutdown()
 				.make();
 
