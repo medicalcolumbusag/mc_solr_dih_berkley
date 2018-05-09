@@ -577,7 +577,7 @@ public class BerkleyBackedCache implements DIHCache {
 		if (env != null) {
 			close();
 		}
-
+		LOG.warn("running destroy for cache: " + cacheName,  Arrays.toString(Thread.currentThread().getStackTrace()));
 		File f = new File(baseLoc + File.separator + cacheName);
 		File[] filesToDelete = f.listFiles();
 		if (filesToDelete != null) {
