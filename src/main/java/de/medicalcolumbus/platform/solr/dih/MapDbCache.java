@@ -6,6 +6,7 @@ import org.apache.solr.handler.dataimport.DIHCache;
 import org.apache.solr.handler.dataimport.DIHCacheSupport;
 import org.mapdb.*;
 
+import org.mapdb.serializer.SerializerArray;
 import org.mapdb.serializer.SerializerCompressionWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.util.*;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static java.util.Objects.isNull;
 
@@ -20,8 +22,8 @@ public class MapDbCache implements DIHCache {
 
 	private static final Logger LOG = LoggerFactory.getLogger(MapDbCache.class);
 
-	private HTreeMap<Object, List<Map<String, Object>>> inMemoryCache;
-	private HTreeMap<Object, List<Map<String, Object>>> onDiskCache;
+	private HTreeMap<Object, HashMap<String, Object>[]> inMemoryCache;
+	private HTreeMap<Object, HashMap<String, Object>[]> onDiskCache;
 
 	private String primaryKeyName = null;
 	private boolean isOpen = false;
@@ -30,6 +32,7 @@ public class MapDbCache implements DIHCache {
 	// disk and in-memory factories
 	private DB dbDisk;
 	private DB dbMemory;
+
 	private String baseLocation;
 	private String cacheName;
 
@@ -39,26 +42,12 @@ public class MapDbCache implements DIHCache {
 	@Override
 	public void open(Context context) {
 		checkOpen(false);
+
+		destroy();
+
 		isOpen = true;
 
-		baseLocation = CachePropertyUtil.getAttributeValueAsString(context, DIHCachePersistProperties.CACHE_BASE_DIRECTORY);
-		if (isNull(baseLocation)) {
-			baseLocation = System.getProperty("java.io.tmpdir");
-		}
-
-		cacheName = CachePropertyUtil.getAttributeValueAsString(context, DIHCachePersistProperties.CACHE_NAME);
-		if (isNull(cacheName)) {
-			cacheName = "MapDbCache_" + System.currentTimeMillis() + "_cache.db";
-		}
-
-		String expireStoreSize = CachePropertyUtil.getAttributeValueAsString(context, DIHCachePersistProperties.EXPIRE_STORE_SIZE);
-		this.expireStoreSize = !isNull(expireStoreSize) ? Integer.parseInt(expireStoreSize) : 16; // 16 GB default value
-
-		String readOnlyStr = CachePropertyUtil.getAttributeValueAsString(context,
-				DIHCacheSupport.CACHE_READ_ONLY);
-		if ("true".equalsIgnoreCase(readOnlyStr)) {
-			isReadOnly = true;
-		}
+		setupCacheLocation(context);
 
 		init();
 	}
@@ -66,16 +55,7 @@ public class MapDbCache implements DIHCache {
 	@Override
 	public void close() {
 		flush();
-
 		isOpen = false;
-
-		if (!dbMemory.isClosed()) {
-			dbMemory.close();
-		}
-
-		if (!dbDisk.isClosed()) {
-			dbDisk.close();
-		}
 	}
 
 	@Override
@@ -121,12 +101,23 @@ public class MapDbCache implements DIHCache {
 			return;
 		}
 
-		List<Map<String,Object>> thisKeysRecs = (List<Map<String, Object>>) inMemoryCache.get(pk);
-		if (thisKeysRecs == null) {
-			thisKeysRecs = new ArrayList<>();
-			inMemoryCache.put(pk, thisKeysRecs);
+		Map<String,Object>[] thisKeysRecs =  inMemoryCache.get(pk);
+
+		List<Map<String, Object>> thisKeyRecsList;
+
+		if (!isNull(thisKeysRecs)) {
+			thisKeyRecsList = new ArrayList<>(Arrays.asList(thisKeysRecs));
+		} else {
+			thisKeyRecsList = new ArrayList<>();
 		}
-		thisKeysRecs.add(rec);
+
+		thisKeyRecsList.add(rec);
+
+		HashMap<String, Object>[] finalArray = new HashMap[thisKeyRecsList.size()];
+		finalArray = thisKeyRecsList.toArray(finalArray);
+		inMemoryCache.put(pk, finalArray);
+
+		dbMemory.commit();
 	}
 
 	@Override
@@ -151,7 +142,7 @@ public class MapDbCache implements DIHCache {
 					}
 				}
 
-				Map.Entry<Object,List<Map<String,Object>>> next = null;
+				Map.Entry<Object,List<Map<String,Object>>> next;
 				if (theMapIter.hasNext()) {
 					next = theMapIter.next();
 					currentKeyResult = next.getValue();
@@ -174,7 +165,7 @@ public class MapDbCache implements DIHCache {
 					}
 				}
 
-				Map.Entry<Object,List<Map<String,Object>>> next = null;
+				Map.Entry<Object,List<Map<String,Object>>> next;
 				if (theMapIter.hasNext()) {
 					next = theMapIter.next();
 					currentKeyResult = next.getValue();
@@ -203,21 +194,33 @@ public class MapDbCache implements DIHCache {
 			List<Map<String,Object>> vals = new ArrayList<>();
 			Iterator<?> iter = ((Iterable<?>) key).iterator();
 			while(iter.hasNext()) {
-				List<Map<String,Object>> val = (List<Map<String, Object>>) inMemoryCache.get(iter.next());
-				if(val!=null) {
-					vals.addAll(val);
+
+				Map<String, Object>[] arrVal =  inMemoryCache.get(iter.next());
+
+				if (arrVal != null) {
+					vals.addAll(new ArrayList<>(Arrays.asList(arrVal)));
 				}
+
 			}
 			if(vals.size()==0) {
 				return null;
 			}
 			return vals.iterator();
 		}
-		List<Map<String,Object>> val = (List<Map<String, Object>>) inMemoryCache.get(key);
+		Map<String,Object>[] val =  inMemoryCache.get(key);
 		if (val == null) {
 			return null;
 		}
-		return val.iterator();
+
+		for(Map<String, Object> mapValue : val) {
+			for (Map.Entry<String, Object> entry : mapValue.entrySet()) {
+				LOG.info("***KEY: ", entry.getKey());
+				LOG.info("***VALUE: ", entry.getValue());
+			}
+		}
+
+
+		return new ArrayList<>(Arrays.asList(val)).iterator();
 	}
 
 	@Override
@@ -257,8 +260,6 @@ public class MapDbCache implements DIHCache {
 		String path = baseLocation + File.separator + cacheName;
 		File onDiskLocation = new File(path);
 
-		//TODO @Luiza if an out of memory error occurs during testing comment all builder functions for Mmap like .fileMmapEnable() so RandomAccessFile is used as default
-
 		dbDisk = DBMaker
 				.fileDB(onDiskLocation)
 				.fileMmapEnable()
@@ -276,18 +277,41 @@ public class MapDbCache implements DIHCache {
 		onDiskCache = dbDisk
 				.hashMap("onDisk_" + cacheName)
 				.keySerializer(dbDisk.getDefaultSerializer())
-				.valueSerializer(new SerializerCompressionWrapper<>(new ListSerializer<>(new MapSerializer())))
+				.valueSerializer(new SerializerCompressionWrapper<>(new SerializerArray<>(new MapSerializer(), (Class<HashMap<String, Object>>) new HashMap<String, Object>().getClass())))
 				.create();
 
 		inMemoryCache = dbMemory
 				.hashMap("inMemory_" + cacheName)
 				.keySerializer(dbMemory.getDefaultSerializer())
-				.valueSerializer(new SerializerCompressionWrapper<>(new ListSerializer<>(new MapSerializer())))
-				.expireStoreSize(expireStoreSize * 1024*1024*1024)
-				.expireAfterCreate()
+				.valueSerializer(new SerializerCompressionWrapper<>(new SerializerArray<>(new MapSerializer(), (Class<HashMap<String, Object>>) new HashMap<String, Object>().getClass())))
+				.expireMaxSize(5000)
 				.expireOverflow(onDiskCache)
-				.expireExecutor(Executors.newScheduledThreadPool(2))
+				.expireExecutor(Executors.newScheduledThreadPool(4))
 				.create();
+	}
+
+
+	private void setupCacheLocation(Context context) {
+		baseLocation = CachePropertyUtil.getAttributeValueAsString(context, DIHCachePersistProperties.CACHE_BASE_DIRECTORY);
+		if (isNull(baseLocation)) {
+			baseLocation = System.getProperty("java.io.tmpdir");
+		}
+
+		cacheName = CachePropertyUtil.getAttributeValueAsString(context, DIHCachePersistProperties.CACHE_NAME);
+		if (isNull(cacheName)) {
+			cacheName = "MapDbCache_" + System.currentTimeMillis() + "_cache.db";
+		} else {
+			cacheName = "MapDbCache_" + cacheName;
+		}
+
+		String expireStoreSize = CachePropertyUtil.getAttributeValueAsString(context, DIHCachePersistProperties.EXPIRE_STORE_SIZE);
+		this.expireStoreSize = !isNull(expireStoreSize) ? Integer.parseInt(expireStoreSize) : 16; // 16 GB default value
+
+		String readOnlyStr = CachePropertyUtil.getAttributeValueAsString(context,
+				DIHCacheSupport.CACHE_READ_ONLY);
+		if ("true".equalsIgnoreCase(readOnlyStr)) {
+			isReadOnly = true;
+		}
 	}
 
 
@@ -300,8 +324,18 @@ public class MapDbCache implements DIHCache {
 			inMemoryCache.clear();
 		}
 
-		if (!isNull(onDiskCache)) {
-			onDiskCache.clear();
+		// delete default named caches
+		File directory = new File(File.separator + baseLocation);
+		File[] cacheFiles = directory.listFiles();
+		if (!isNull(cacheFiles)) {
+			for (File file : cacheFiles) {
+				LOG.info(file.getName());
+				if (file.getName().startsWith("MapDbCache_")) {
+					if (file.delete()) {
+						throw new RuntimeException("Could not delete cache: " + file);
+					}
+				}
+			}
 		}
 	}
 }
