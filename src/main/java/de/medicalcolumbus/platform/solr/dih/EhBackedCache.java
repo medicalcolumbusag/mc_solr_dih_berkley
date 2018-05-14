@@ -232,7 +232,7 @@ public class EhBackedCache implements DIHCache {
 			cacheName = "EhBackedCache-" + System.currentTimeMillis();
 		}
 
-		maxCacheMemSize = 1000L;
+		maxCacheMemSize = 100_000L;
 		String maxSize = CachePropertyUtil.getAttributeValueAsString(context, DIHCachePersistProperties.EXPIRE_STORE_SIZE);
 		if (maxSize != null) {
 			maxCacheMemSize = Long.parseLong(maxSize);
