@@ -141,6 +141,12 @@ public class DIHCachePersistProperties {
 	 * before it overflows to disk. The value is an integer representing
 	 * the number of desired GB
 	 */
-	public static final String EXPIRE_STORE_SIZE = "expireStoreSize";
+	public static final String EXPIRE_ELEMENT_MAX_SIZE = "expireElementMaxSize";
+
+	public static final String RAM_TO_DISK_THREAD_NUMBER = "ramToDiskThreadNumber";
+
+	public static final String DISK_MAX_SIZE = "diskMaxSize";
+
+	public static final String EXPIRE_FROM_RAM = "expireFromRam";
 
 }

@@ -12,20 +12,25 @@ import org.ehcache.config.builders.CacheManagerBuilder;
 import org.ehcache.config.builders.ResourcePoolsBuilder;
 import org.ehcache.config.units.EntryUnit;
 import org.ehcache.config.units.MemoryUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.*;
 
+import static java.util.Objects.isNull;
+
 public class EhBackedCache implements DIHCache {
+
+	private static final Logger LOG = LoggerFactory.getLogger(EhBackedCache.class);
 
 	private Cache<String, EhCacheEntry> theCache = null;
 	private PersistentCacheManager cacheManager = null;
 	private boolean isOpen = false;
 	private boolean isReadOnly = false;
 	private String cacheName = null;
-	private String baseLocation = null;
-	private Long maxCacheMemSize = null;
-	String primaryKeyName = null;
+	private String primaryKeyName = null;
+	private String baseLocation;
 
 	@SuppressWarnings("unchecked")
 	@Override
@@ -54,7 +59,7 @@ public class EhBackedCache implements DIHCache {
 			return;
 		}
 		EhCacheEntry cacheEntry = theCache.get(pk.toString());
-		List<Map<String, Object>> thisKeysRecs = null;
+		List<Map<String, Object>> thisKeysRecs;
 		if (cacheEntry == null) {
 			thisKeysRecs = new ArrayList<>();
 			theCache.put(pk.toString(), new EhCacheEntry(thisKeysRecs));
@@ -114,6 +119,7 @@ public class EhBackedCache implements DIHCache {
 		try {
 			cacheManager.destroyCache(cacheName);
 			cacheManager.close();
+
 		} catch (CachePersistenceException cpe) {
 			throw new RuntimeException("Failed to destroy cache", cpe);
 		}
@@ -134,9 +140,8 @@ public class EhBackedCache implements DIHCache {
 		}
 		if (key instanceof Iterable<?>) {
 			List<Map<String, Object>> vals = new ArrayList<>();
-			Iterator<?> iter = ((Iterable<?>) key).iterator();
-			while (iter.hasNext()) {
-				List<Map<String, Object>> val = theCache.get(iter.next().toString()).getValues();
+			for (Object o : ((Iterable<?>) key)) {
+				List<Map<String, Object>> val = theCache.get(o.toString()).getValues();
 				if (val != null) {
 					vals.addAll(val);
 				}
@@ -222,20 +227,31 @@ public class EhBackedCache implements DIHCache {
 	@Override
 	public void open(Context context) {
 		checkOpen(false);
+
 		isOpen = true;
+
 		baseLocation = CachePropertyUtil.getAttributeValueAsString(context, DIHCachePersistProperties.CACHE_BASE_DIRECTORY);
 		if (baseLocation == null) {
 			baseLocation = System.getProperty("java.io.tmpdir");
 		}
+
+		deleteCacheFiles();
+
 		cacheName = CachePropertyUtil.getAttributeValueAsString(context, DIHCachePersistProperties.CACHE_NAME);
 		if (cacheName == null) {
-			cacheName = "EhBackedCache-" + System.currentTimeMillis();
+			cacheName = "EhBackedCache_" + System.currentTimeMillis();
 		}
 
-		maxCacheMemSize = 100_000L;
-		String maxSize = CachePropertyUtil.getAttributeValueAsString(context, DIHCachePersistProperties.EXPIRE_STORE_SIZE);
+		long maxCacheMemSize = 1_000L; //entries
+		String maxSize = CachePropertyUtil.getAttributeValueAsString(context, DIHCachePersistProperties.EXPIRE_ELEMENT_MAX_SIZE);
 		if (maxSize != null) {
 			maxCacheMemSize = Long.parseLong(maxSize);
+		}
+
+		int diskMaxSize = 1; //GB
+		String diskMaxSizeProp = CachePropertyUtil.getAttributeValueAsString(context, DIHCachePersistProperties.DISK_MAX_SIZE);
+		if (diskMaxSizeProp != null) {
+			diskMaxSize = Integer.parseInt(diskMaxSizeProp);
 		}
 
 		cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
@@ -244,8 +260,7 @@ public class EhBackedCache implements DIHCache {
 						CacheConfigurationBuilder.newCacheConfigurationBuilder(String.class, EhCacheEntry.class,
 								ResourcePoolsBuilder.newResourcePoolsBuilder()
 										.heap(maxCacheMemSize, EntryUnit.ENTRIES)
-										//.offheap()
-										.disk(3, MemoryUnit.GB, true)
+										.disk(diskMaxSize, MemoryUnit.GB, true)
 						)
 				).build(true);
 
@@ -260,6 +275,22 @@ public class EhBackedCache implements DIHCache {
 		String readOnlyStr = CachePropertyUtil.getAttributeValueAsString(context, DIHCacheSupport.CACHE_READ_ONLY);
 		if ("true".equalsIgnoreCase(readOnlyStr)) {
 			isReadOnly = true;
+		}
+	}
+
+	private void deleteCacheFiles() {
+		File directory = new File(File.separator + baseLocation);
+		File[] cacheFiles = directory.listFiles();
+		if (!isNull(cacheFiles)) {
+			for (File file : cacheFiles) {
+				LOG.info(file.getName());
+				if (file.getName().startsWith("EhBackedCache_")) {
+					if (!file.delete()) {
+						LOG.error("Could not delete cache: " + file);
+						throw new RuntimeException("Could not delete cache: " + file);
+					}
+				}
+			}
 		}
 	}
 }

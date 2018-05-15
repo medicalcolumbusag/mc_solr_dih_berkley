@@ -7,16 +7,18 @@ import org.apache.solr.handler.dataimport.DIHCacheSupport;
 import org.mapdb.*;
 
 import org.mapdb.serializer.SerializerArray;
-import org.mapdb.serializer.SerializerCompressionWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.*;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
+import static de.medicalcolumbus.platform.solr.dih.DIHCachePersistProperties.EXPIRE_ELEMENT_MAX_SIZE;
+import static de.medicalcolumbus.platform.solr.dih.DIHCachePersistProperties.EXPIRE_FROM_RAM;
+import static de.medicalcolumbus.platform.solr.dih.DIHCachePersistProperties.RAM_TO_DISK_THREAD_NUMBER;
 import static java.util.Objects.isNull;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class MapDbCache implements DIHCache {
 
@@ -29,32 +31,30 @@ public class MapDbCache implements DIHCache {
 	private boolean isOpen = false;
 	private boolean isReadOnly = false;
 
-	// disk and in-memory factories
-	private DB dbDisk;
 	private DB dbMemory;
+	private DB dbDisk;
 
 	private String baseLocation;
 	private String cacheName;
-
-	private int expireStoreSize;
 
 
 	@Override
 	public void open(Context context) {
 		checkOpen(false);
 
-		destroy();
-
 		isOpen = true;
 
 		setupCacheLocation(context);
 
-		init();
+		init(context);
 	}
 
 	@Override
 	public void close() {
 		flush();
+
+		closeCaches();
+
 		isOpen = false;
 	}
 
@@ -62,15 +62,32 @@ public class MapDbCache implements DIHCache {
 	public void flush() {
 		checkOpen(true);
 		checkReadOnly();
-		dbMemory.commit();
+		if (!isNull(dbMemory) && !dbMemory.isClosed()) {
+			dbMemory.commit();
+		}
 	}
 
 	@Override
 	public void destroy() {
-		deleteAll(true);
-		inMemoryCache = null;
-		onDiskCache = null;
-		isOpen = false;
+		close();
+		deleteCacheFile();
+	}
+
+	private void closeCaches() {
+
+		if (!isNull(inMemoryCache) && !inMemoryCache.isClosed()) {
+			inMemoryCache.close();
+			if (!isNull(dbMemory) && !dbMemory.isClosed()) {
+				dbMemory.close();
+			}
+		}
+
+		if (!isNull(onDiskCache) && !onDiskCache.isClosed()) {
+			onDiskCache.close();
+			if (!isNull(dbDisk) && !dbDisk.isClosed()) {
+				dbDisk.close();
+			}
+		}
 	}
 
 	@Override
@@ -117,7 +134,6 @@ public class MapDbCache implements DIHCache {
 		finalArray = thisKeyRecsList.toArray(finalArray);
 		inMemoryCache.put(pk, finalArray);
 
-		dbMemory.commit();
 	}
 
 	@Override
@@ -255,7 +271,22 @@ public class MapDbCache implements DIHCache {
 		}
 	}
 
-	private void init() {
+	private void init(Context context) {
+
+		isOpen = true;
+
+		int expireElementMaxSize;
+		int ramToDiskThreadNumber;
+		int expireFromRamTime;
+
+		String expireElementMaxSizeProp = CachePropertyUtil.getAttributeValueAsString(context, EXPIRE_ELEMENT_MAX_SIZE);
+		expireElementMaxSize = !isNull(expireElementMaxSizeProp) ? Integer.parseInt(expireElementMaxSizeProp) : 1_000;
+
+		String ramToDiskThreadNumberProp = CachePropertyUtil.getAttributeValueAsString(context, RAM_TO_DISK_THREAD_NUMBER);
+		ramToDiskThreadNumber = !isNull(ramToDiskThreadNumberProp) ? Integer.parseInt(ramToDiskThreadNumberProp) : 1; // 1 thread default
+
+		String expireFromRamProp = CachePropertyUtil.getAttributeValueAsString(context, EXPIRE_FROM_RAM);
+		expireFromRamTime = !isNull(expireFromRamProp) ? Integer.parseInt(expireFromRamProp) : 5; // 5 seconds default
 
 		String path = baseLocation + File.separator + cacheName;
 		File onDiskLocation = new File(path);
@@ -277,16 +308,17 @@ public class MapDbCache implements DIHCache {
 		onDiskCache = dbDisk
 				.hashMap("onDisk_" + cacheName)
 				.keySerializer(dbDisk.getDefaultSerializer())
-				.valueSerializer(new SerializerCompressionWrapper<>(new SerializerArray<>(new MapSerializer(), (Class<HashMap<String, Object>>) new HashMap<String, Object>().getClass())))
+				.valueSerializer(new SerializerArray<>(new MapDbSerializer(), (Class<HashMap<String, Object>>) new HashMap<String, Object>().getClass()))
 				.create();
 
 		inMemoryCache = dbMemory
 				.hashMap("inMemory_" + cacheName)
 				.keySerializer(dbMemory.getDefaultSerializer())
-				.valueSerializer(new SerializerCompressionWrapper<>(new SerializerArray<>(new MapSerializer(), (Class<HashMap<String, Object>>) new HashMap<String, Object>().getClass())))
-				.expireMaxSize(5000)
+				.valueSerializer(new SerializerArray<>(new MapDbSerializer(), (Class<HashMap<String, Object>>) new HashMap<String, Object>().getClass()))
+				.expireMaxSize(expireElementMaxSize)
+				.expireAfterGet(expireFromRamTime, SECONDS)
 				.expireOverflow(onDiskCache)
-				.expireExecutor(Executors.newScheduledThreadPool(4))
+				.expireExecutor(Executors.newScheduledThreadPool(ramToDiskThreadNumber))
 				.create();
 	}
 
@@ -303,9 +335,6 @@ public class MapDbCache implements DIHCache {
 		} else {
 			cacheName = "MapDbCache_" + cacheName;
 		}
-
-		String expireStoreSize = CachePropertyUtil.getAttributeValueAsString(context, DIHCachePersistProperties.EXPIRE_STORE_SIZE);
-		this.expireStoreSize = !isNull(expireStoreSize) ? Integer.parseInt(expireStoreSize) : 16; // 16 GB default value
 
 		String readOnlyStr = CachePropertyUtil.getAttributeValueAsString(context,
 				DIHCacheSupport.CACHE_READ_ONLY);
@@ -324,17 +353,19 @@ public class MapDbCache implements DIHCache {
 			inMemoryCache.clear();
 		}
 
-		// delete default named caches
-		File directory = new File(File.separator + baseLocation);
-		File[] cacheFiles = directory.listFiles();
-		if (!isNull(cacheFiles)) {
-			for (File file : cacheFiles) {
-				LOG.info(file.getName());
-				if (file.getName().startsWith("MapDbCache_")) {
-					if (file.delete()) {
-						throw new RuntimeException("Could not delete cache: " + file);
-					}
-				}
+		if (!isNull(onDiskCache)) {
+			onDiskCache.clear();
+		}
+
+	}
+
+	private void deleteCacheFile() {
+		File cacheFile = new File(baseLocation + File.separator + cacheName);
+		LOG.info(cacheFile.getName());
+		if (cacheFile.exists() && cacheFile.isFile()) {
+			if (!cacheFile.delete()) {
+				LOG.error("Could not delete file: " + cacheFile);
+				throw new RuntimeException("Could not delete file: " + cacheFile);
 			}
 		}
 	}

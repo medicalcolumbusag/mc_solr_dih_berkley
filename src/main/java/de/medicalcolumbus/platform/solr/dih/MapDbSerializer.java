@@ -13,9 +13,9 @@ import java.util.Map;
 
 import static java.util.Objects.isNull;
 
-public class MapSerializer implements Serializer<HashMap<String, Object>>, Serializable {
+public class MapDbSerializer implements Serializer<HashMap<String, Object>>, Serializable {
 
-	private static final Logger LOG = LoggerFactory.getLogger(MapSerializer.class);
+	private static final Logger LOG = LoggerFactory.getLogger(MapDbSerializer.class);
 
 	@Override
 	public void serialize(@NotNull DataOutput2 out, @NotNull HashMap<String, Object> value) throws IOException {
