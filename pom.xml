@@ -14,6 +14,23 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 
+	<profiles>
+		<profile>
+			<id>nexus-fra</id>
+			<distributionManagement>
+				<repository>
+					<id>releases</id>
+					<url>http://nexus.platform.medicalcolumbus.intern/content/repositories/releases</url>
+				</repository>
+
+				<snapshotRepository>
+					<id>snapshots</id>
+					<url>http://nexus.platform.medicalcolumbus.intern/content/repositories/snapshots</url>
+				</snapshotRepository>
+			</distributionManagement>
+		</profile>
+	</profiles>
+
 	<dependencies>
 		<dependency>
 			<groupId>org.slf4j</groupId>
@@ -97,7 +114,7 @@
 				</executions>
 				<configuration>
 					<descriptorRefs>
-						<descriptorRef>${project.version}</descriptorRef>
+						<descriptorRef>jar-with-dependencies</descriptorRef>
 					</descriptorRefs>
 					<finalName>mc-solr-dih-custom</finalName>
 				</configuration>
