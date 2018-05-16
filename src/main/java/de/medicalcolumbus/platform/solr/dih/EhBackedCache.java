@@ -251,8 +251,8 @@ public class EhBackedCache implements DIHCache {
 			diskMaxSize = Integer.parseInt(diskMaxSizeProp);
 		}
 
-		/**
-		 *  @ramMaxSize must always be smaller than @diskMaxSize
+		/*
+		   @ramMaxSize must always be smaller than @diskMaxSize
 		 *  so it can write to disk
 		 */
 		int ramMaxSize = 500; // MB
