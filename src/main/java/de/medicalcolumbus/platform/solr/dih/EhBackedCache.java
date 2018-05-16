@@ -4,7 +4,9 @@ import org.apache.solr.handler.dataimport.CachePropertyUtil;
 import org.apache.solr.handler.dataimport.Context;
 import org.apache.solr.handler.dataimport.DIHCache;
 import org.apache.solr.handler.dataimport.DIHCacheSupport;
-import org.ehcache.*;
+import org.ehcache.Cache;
+import org.ehcache.PersistentUserManagedCache;
+import org.ehcache.config.ResourcePools;
 import org.ehcache.config.builders.ResourcePoolsBuilder;
 import org.ehcache.config.builders.UserManagedCacheBuilder;
 import org.ehcache.config.units.EntryUnit;
@@ -239,48 +241,56 @@ public class EhBackedCache implements DIHCache {
 		String destroyDelayInSecondsProp = CachePropertyUtil.getAttributeValueAsString(context, DIHCachePersistProperties.DESTROY_DELAY_SECONDS);
 		destroyDelayInSeconds = !isNull(destroyDelayInSecondsProp) ? Integer.parseInt(destroyDelayInSecondsProp) : 10;
 
-		long maxCacheMemSize = 1_000L; //entries
-		String maxSize = CachePropertyUtil.getAttributeValueAsString(context, DIHCachePersistProperties.EXPIRE_ELEMENT_MAX_SIZE);
-		if (maxSize != null) {
-			maxCacheMemSize = Long.parseLong(maxSize);
+		Long maxHeapMemSize = 1_000L; // entries
+		String maxNoOfElements = CachePropertyUtil.getAttributeValueAsString(context, DIHCachePersistProperties.EXPIRE_ELEMENT_MAX_SIZE);
+		if (maxNoOfElements != null) {
+			maxHeapMemSize = Long.parseLong(maxNoOfElements);
 		}
 
-		int diskMaxSize = 1_000; //MB
+		Long diskMaxSize = 1_000L; // MB
 		String diskMaxSizeProp = CachePropertyUtil.getAttributeValueAsString(context, DIHCachePersistProperties.DISK_MAX_SIZE);
 		if (diskMaxSizeProp != null) {
-			diskMaxSize = Integer.parseInt(diskMaxSizeProp);
+			diskMaxSize = Long.parseLong(diskMaxSizeProp);
 		}
 
 		/*
 		   @ramMaxSize must always be smaller than @diskMaxSize
-		 *  so it can write to disk
+		 *  so it can write to disk or ignored to write directly from HEAP to disk
 		 */
-		int ramMaxSize = 500; // MB
+		Long ramMaxSize = null; // MB
 		String ramMaxSizeProp = CachePropertyUtil.getAttributeValueAsString(context, DIHCachePersistProperties.RAM_MAX_SIZE);
 		if (ramMaxSizeProp != null) {
-			ramMaxSize = Integer.parseInt(ramMaxSizeProp);
+			ramMaxSize = Long.parseLong(ramMaxSizeProp);
 		}
-
 
 		persistenceService = new DefaultLocalPersistenceService(new DefaultPersistenceConfiguration(new File(baseLocation, cacheName)));
 
 		theCache = UserManagedCacheBuilder.newUserManagedCacheBuilder(String.class, EhCacheEntry.class)
 				.with(new UserManagedPersistenceContext<>(cacheName, persistenceService))
-				.withResourcePools(ResourcePoolsBuilder.newResourcePoolsBuilder()
-						.heap(maxCacheMemSize, EntryUnit.ENTRIES)
-						.offheap(ramMaxSize, MemoryUnit.MB)
-						.disk(diskMaxSize, MemoryUnit.MB, false))
+				.withResourcePools(createCacheResourcePools(maxHeapMemSize, ramMaxSize, diskMaxSize))
 				.build(true);
 
 		String pkName = CachePropertyUtil.getAttributeValueAsString(context, DIHCacheSupport.CACHE_PRIMARY_KEY);
 		if (pkName != null) {
 			primaryKeyName = pkName;
 		}
+
 		isReadOnly = false;
 		String readOnlyStr = CachePropertyUtil.getAttributeValueAsString(context, DIHCacheSupport.CACHE_READ_ONLY);
 		if ("true".equalsIgnoreCase(readOnlyStr)) {
 			isReadOnly = true;
 		}
+	}
+
+	private ResourcePools createCacheResourcePools(Long maxHeapEntries, Long maxOffHeapMB, Long maxDiskMB) {
+		// heap is mandatory - defaults to 1000 entries if not configured
+		ResourcePoolsBuilder resourcePoolsBuilder = ResourcePoolsBuilder.newResourcePoolsBuilder().heap(maxHeapEntries, EntryUnit.ENTRIES);
+
+		if (maxOffHeapMB != null) {
+			resourcePoolsBuilder = resourcePoolsBuilder.offheap(maxOffHeapMB, MemoryUnit.MB);
+		}
+
+		return resourcePoolsBuilder.disk(maxDiskMB, MemoryUnit.MB, false).build();
 	}
 
 }

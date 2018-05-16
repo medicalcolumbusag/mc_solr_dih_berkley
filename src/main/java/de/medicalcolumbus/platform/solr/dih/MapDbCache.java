@@ -364,7 +364,7 @@ public class MapDbCache implements DIHCache {
 		LOG.debug(cacheFile.getName());
 		if (cacheFile.exists() && cacheFile.isFile()) {
 			if (!cacheFile.delete()) {
-				LOG.error("Could not delete file: " + cacheFile);
+				LOG.error("Could not delete file: ", cacheFile);
 				throw new RuntimeException("Could not delete file: " + cacheFile);
 			}
 		}

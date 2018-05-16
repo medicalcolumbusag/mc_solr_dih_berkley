@@ -1,6 +1,10 @@
 package de.medicalcolumbus.platform.solr.dih;
 
-public class DIHCachePersistProperties {
+public final class DIHCachePersistProperties {
+
+	private DIHCachePersistProperties() {
+	}
+
 	/**
 	 * <p>
 	 * Specify the Cache Implementation to use
@@ -137,20 +141,41 @@ public class DIHCachePersistProperties {
 	public static final String FIELD_TYPES = "persistCacheFieldTypes";
 
 	/**
-	 * Value for maximum ram memory used by the in memory cache
-	 * before it overflows to disk. The value is an integer representing
-	 * the number of desired GB
+	 * EhCache and MapDbCache specific value. Defines maximum elements number stored in memory (heap)
+	 * before it overflows to disk.
 	 */
 	public static final String EXPIRE_ELEMENT_MAX_SIZE = "expireElementMaxSize";
 
+	/**
+	 * MapDb specific value. Defines number of threads used to write data from RAM to disk.
+	 * Defaults to 1.
+	 */
 	public static final String RAM_TO_DISK_THREAD_NUMBER = "ramToDiskThreadNumber";
 
+
+	/**
+	 * EHCache specific value. Defines how much disk space in MB can be used by the cache.
+	 * Defaults to 1000 MB.
+	 */
 	public static final String DISK_MAX_SIZE = "diskMaxSize";
 
+	/**
+	 * EHCache specific value. Defines how much memory in MB should be used as off Heap cache space.
+	 * When not specified, off heap space is not used. Providing a value might boost performance.
+	 * Note that it must have a value smaller then 'diskMaxSize' to permit overflow to disk.
+	 */
 	public static final String RAM_MAX_SIZE = "ramMaxSize";
 
+	/**
+	 * MapDBCache specific value. Defines how many seconds an element should persist in RAM after get.
+	 * Defaults to 5 seconds
+	 */
 	public static final String EXPIRE_FROM_RAM = "expireFromRam";
 
+	/**
+	 * EHCache specific value - defines a delay in seconds for cleaning up cache files. Defaults to 10 sec.
+	 * If you spot cache files are not removed you might need to increase this value
+	 */
 	public static final String DESTROY_DELAY_SECONDS = "destroyDelayInSeconds";
 
 }
