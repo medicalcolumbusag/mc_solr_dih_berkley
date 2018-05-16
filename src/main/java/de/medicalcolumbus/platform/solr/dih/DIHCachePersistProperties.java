@@ -149,4 +149,6 @@ public class DIHCachePersistProperties {
 
 	public static final String EXPIRE_FROM_RAM = "expireFromRam";
 
+	public static final String DESTROY_DELAY_SECONDS = "destroyDelayInSeconds";
+
 }

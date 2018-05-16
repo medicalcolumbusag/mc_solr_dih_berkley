@@ -4,33 +4,32 @@ import org.apache.solr.handler.dataimport.CachePropertyUtil;
 import org.apache.solr.handler.dataimport.Context;
 import org.apache.solr.handler.dataimport.DIHCache;
 import org.apache.solr.handler.dataimport.DIHCacheSupport;
-import org.ehcache.Cache;
-import org.ehcache.CachePersistenceException;
-import org.ehcache.PersistentCacheManager;
-import org.ehcache.config.builders.CacheConfigurationBuilder;
-import org.ehcache.config.builders.CacheManagerBuilder;
+import org.ehcache.*;
 import org.ehcache.config.builders.ResourcePoolsBuilder;
+import org.ehcache.config.builders.UserManagedCacheBuilder;
 import org.ehcache.config.units.EntryUnit;
 import org.ehcache.config.units.MemoryUnit;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.ehcache.core.spi.service.LocalPersistenceService;
+import org.ehcache.impl.config.persistence.DefaultPersistenceConfiguration;
+import org.ehcache.impl.config.persistence.UserManagedPersistenceContext;
+import org.ehcache.impl.persistence.DefaultLocalPersistenceService;
 
 import java.io.File;
 import java.util.*;
 
+import static de.medicalcolumbus.platform.solr.dih.EhCacheUtil.deleteCacheAsync;
 import static java.util.Objects.isNull;
 
 public class EhBackedCache implements DIHCache {
 
-	private static final Logger LOG = LoggerFactory.getLogger(EhBackedCache.class);
-
-	private Cache<String, EhCacheEntry> theCache = null;
-	private PersistentCacheManager cacheManager = null;
+	private PersistentUserManagedCache<String, EhCacheEntry> theCache = null;
 	private boolean isOpen = false;
 	private boolean isReadOnly = false;
 	private String cacheName = null;
 	private String primaryKeyName = null;
 	private String baseLocation;
+	private LocalPersistenceService persistenceService;
+	private int destroyDelayInSeconds;
 
 	@SuppressWarnings("unchecked")
 	@Override
@@ -86,6 +85,8 @@ public class EhBackedCache implements DIHCache {
 
 	@Override
 	public void close() {
+		theCache.close();
+		persistenceService.stop();
 		isOpen = false;
 	}
 
@@ -116,15 +117,10 @@ public class EhBackedCache implements DIHCache {
 	@Override
 	public void destroy() {
 		deleteAll(true);
-		try {
-			cacheManager.destroyCache(cacheName);
-			cacheManager.close();
-
-		} catch (CachePersistenceException cpe) {
-			throw new RuntimeException("Failed to destroy cache", cpe);
-		}
-		isOpen = false;
+		close();
+		deleteCacheAsync(theCache, baseLocation, cacheName, destroyDelayInSeconds);
 	}
+
 
 	@Override
 	public void flush() {
@@ -235,12 +231,13 @@ public class EhBackedCache implements DIHCache {
 			baseLocation = System.getProperty("java.io.tmpdir");
 		}
 
-		deleteCacheFiles();
-
 		cacheName = CachePropertyUtil.getAttributeValueAsString(context, DIHCachePersistProperties.CACHE_NAME);
 		if (cacheName == null) {
 			cacheName = "EhBackedCache_" + System.currentTimeMillis();
 		}
+
+		String destroyDelayInSecondsProp = CachePropertyUtil.getAttributeValueAsString(context, DIHCachePersistProperties.DESTROY_DELAY_SECONDS);
+		destroyDelayInSeconds = !isNull(destroyDelayInSecondsProp) ? Integer.parseInt(destroyDelayInSecondsProp) : 10;
 
 		long maxCacheMemSize = 1_000L; //entries
 		String maxSize = CachePropertyUtil.getAttributeValueAsString(context, DIHCachePersistProperties.EXPIRE_ELEMENT_MAX_SIZE);
@@ -248,24 +245,21 @@ public class EhBackedCache implements DIHCache {
 			maxCacheMemSize = Long.parseLong(maxSize);
 		}
 
-		int diskMaxSize = 1; //GB
+		int diskMaxSize = 1_000; //MB
 		String diskMaxSizeProp = CachePropertyUtil.getAttributeValueAsString(context, DIHCachePersistProperties.DISK_MAX_SIZE);
 		if (diskMaxSizeProp != null) {
 			diskMaxSize = Integer.parseInt(diskMaxSizeProp);
 		}
 
-		cacheManager = CacheManagerBuilder.newCacheManagerBuilder()
-				.with(CacheManagerBuilder.persistence(new File(baseLocation, cacheName)))
-				.withCache(cacheName,
-						CacheConfigurationBuilder.newCacheConfigurationBuilder(String.class, EhCacheEntry.class,
-								ResourcePoolsBuilder.newResourcePoolsBuilder()
-										.heap(maxCacheMemSize, EntryUnit.ENTRIES)
-										.disk(diskMaxSize, MemoryUnit.GB, true)
-						)
-				).build(true);
 
+		persistenceService = new DefaultLocalPersistenceService(new DefaultPersistenceConfiguration(new File(baseLocation, cacheName)));
 
-		theCache = cacheManager.getCache(cacheName, String.class, EhCacheEntry.class);
+		theCache = UserManagedCacheBuilder.newUserManagedCacheBuilder(String.class, EhCacheEntry.class)
+				.with(new UserManagedPersistenceContext<>(cacheName, persistenceService))
+				.withResourcePools(ResourcePoolsBuilder.newResourcePoolsBuilder()
+						.heap(maxCacheMemSize, EntryUnit.ENTRIES)
+						.disk(diskMaxSize, MemoryUnit.MB, false))
+				.build(true);
 
 		String pkName = CachePropertyUtil.getAttributeValueAsString(context, DIHCacheSupport.CACHE_PRIMARY_KEY);
 		if (pkName != null) {
@@ -278,19 +272,4 @@ public class EhBackedCache implements DIHCache {
 		}
 	}
 
-	private void deleteCacheFiles() {
-		File directory = new File(File.separator + baseLocation);
-		File[] cacheFiles = directory.listFiles();
-		if (!isNull(cacheFiles)) {
-			for (File file : cacheFiles) {
-				LOG.info(file.getName());
-				if (file.getName().startsWith("EhBackedCache_")) {
-					if (!file.delete()) {
-						LOG.error("Could not delete cache: " + file);
-						throw new RuntimeException("Could not delete cache: " + file);
-					}
-				}
-			}
-		}
-	}
 }
