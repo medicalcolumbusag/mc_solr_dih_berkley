@@ -251,6 +251,16 @@ public class EhBackedCache implements DIHCache {
 			diskMaxSize = Integer.parseInt(diskMaxSizeProp);
 		}
 
+		/**
+		 *  @ramMaxSize must always be smaller than @diskMaxSize
+		 *  so it can write to disk
+		 */
+		int ramMaxSize = 500; // MB
+		String ramMaxSizeProp = CachePropertyUtil.getAttributeValueAsString(context, DIHCachePersistProperties.RAM_MAX_SIZE);
+		if (ramMaxSizeProp != null) {
+			ramMaxSize = Integer.parseInt(ramMaxSizeProp);
+		}
+
 
 		persistenceService = new DefaultLocalPersistenceService(new DefaultPersistenceConfiguration(new File(baseLocation, cacheName)));
 
@@ -258,6 +268,7 @@ public class EhBackedCache implements DIHCache {
 				.with(new UserManagedPersistenceContext<>(cacheName, persistenceService))
 				.withResourcePools(ResourcePoolsBuilder.newResourcePoolsBuilder()
 						.heap(maxCacheMemSize, EntryUnit.ENTRIES)
+						.offheap(ramMaxSize, MemoryUnit.MB)
 						.disk(diskMaxSize, MemoryUnit.MB, false))
 				.build(true);
 

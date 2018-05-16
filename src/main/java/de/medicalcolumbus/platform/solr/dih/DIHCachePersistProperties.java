@@ -147,6 +147,8 @@ public class DIHCachePersistProperties {
 
 	public static final String DISK_MAX_SIZE = "diskMaxSize";
 
+	public static final String RAM_MAX_SIZE = "ramMaxSize";
+
 	public static final String EXPIRE_FROM_RAM = "expireFromRam";
 
 	public static final String DESTROY_DELAY_SECONDS = "destroyDelayInSeconds";
