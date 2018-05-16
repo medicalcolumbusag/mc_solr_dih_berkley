@@ -3,8 +3,12 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
          xmlns="http://maven.apache.org/POM/4.0.0">
 	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>de.medicalcolumbus.platform</groupId>
+		<artifactId>mc-platform</artifactId>
+		<version>1.21.2</version>
+	</parent>
 
-	<groupId>de.medicalcolumbus.platform</groupId>
 	<artifactId>mc-solr-dih-berkley</artifactId>
 	<version>0.0.3029-SNAPSHOT</version>
 	<name>mc-solr-dih-berkley</name>
