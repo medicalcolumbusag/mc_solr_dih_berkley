@@ -134,6 +134,8 @@ public class MapDbCache implements DIHCache {
 		finalArray = thisKeyRecsList.toArray(finalArray);
 		inMemoryCache.put(pk, finalArray);
 
+		dbMemory.commit();
+
 	}
 
 	@Override
@@ -283,7 +285,7 @@ public class MapDbCache implements DIHCache {
 		expireElementMaxSize = !isNull(expireElementMaxSizeProp) ? Integer.parseInt(expireElementMaxSizeProp) : 1_000;
 
 		String ramToDiskThreadNumberProp = CachePropertyUtil.getAttributeValueAsString(context, RAM_TO_DISK_THREAD_NUMBER);
-		ramToDiskThreadNumber = !isNull(ramToDiskThreadNumberProp) ? Integer.parseInt(ramToDiskThreadNumberProp) : 1; // 1 thread default
+		ramToDiskThreadNumber = !isNull(ramToDiskThreadNumberProp) ? Integer.parseInt(ramToDiskThreadNumberProp) : 2; // 2 threads default
 
 		String expireFromRamProp = CachePropertyUtil.getAttributeValueAsString(context, EXPIRE_FROM_RAM);
 		expireFromRamTime = !isNull(expireFromRamProp) ? Integer.parseInt(expireFromRamProp) : 5; // 5 seconds default
