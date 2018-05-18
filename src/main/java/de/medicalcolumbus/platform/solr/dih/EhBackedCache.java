@@ -241,7 +241,7 @@ public class EhBackedCache implements DIHCache {
 		String destroyDelayInSecondsProp = CachePropertyUtil.getAttributeValueAsString(context, DIHCachePersistProperties.DESTROY_DELAY_SECONDS);
 		destroyDelayInSeconds = !isNull(destroyDelayInSecondsProp) ? Integer.parseInt(destroyDelayInSecondsProp) : 10;
 
-		Long maxHeapMemSize = 1_000L; // entries
+		Long maxHeapMemSize = 10_000L; // entries
 		String maxNoOfElements = CachePropertyUtil.getAttributeValueAsString(context, DIHCachePersistProperties.EXPIRE_ELEMENT_MAX_SIZE);
 		if (maxNoOfElements != null) {
 			maxHeapMemSize = Long.parseLong(maxNoOfElements);

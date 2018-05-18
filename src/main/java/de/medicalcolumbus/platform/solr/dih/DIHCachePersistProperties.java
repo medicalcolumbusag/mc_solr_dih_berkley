@@ -147,13 +147,6 @@ public final class DIHCachePersistProperties {
 	public static final String EXPIRE_ELEMENT_MAX_SIZE = "expireElementMaxSize";
 
 	/**
-	 * MapDb specific value. Defines number of threads used to write data from RAM to disk.
-	 * Defaults to 1.
-	 */
-	public static final String RAM_TO_DISK_THREAD_NUMBER = "ramToDiskThreadNumber";
-
-
-	/**
 	 * EHCache specific value. Defines how much disk space in MB can be used by the cache.
 	 * Defaults to 1000 MB.
 	 */
@@ -165,12 +158,6 @@ public final class DIHCachePersistProperties {
 	 * Note that it must have a value smaller then 'diskMaxSize' to permit overflow to disk.
 	 */
 	public static final String RAM_MAX_SIZE = "ramMaxSize";
-
-	/**
-	 * MapDBCache specific value. Defines how many seconds an element should persist in RAM after get.
-	 * Defaults to 5 seconds
-	 */
-	public static final String EXPIRE_FROM_RAM = "expireFromRam";
 
 	/**
 	 * EHCache specific value - defines a delay in seconds for cleaning up cache files. Defaults to 10 sec.
