@@ -6,7 +6,7 @@
 
 	<groupId>de.medicalcolumbus.platform</groupId>
 	<artifactId>mc-solr-dih-berkley</artifactId>
-	<version>0.0.3029-SNAPSHOT</version>
+	<version>1.4.4</version>
 	<name>mc-solr-dih-berkley</name>
 	<packaging>jar</packaging>
 
