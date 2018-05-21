@@ -12,6 +12,7 @@ import org.ehcache.config.builders.UserManagedCacheBuilder;
 import org.ehcache.config.units.EntryUnit;
 import org.ehcache.config.units.MemoryUnit;
 import org.ehcache.core.spi.service.LocalPersistenceService;
+import org.ehcache.expiry.Expirations;
 import org.ehcache.impl.config.persistence.DefaultPersistenceConfiguration;
 import org.ehcache.impl.config.persistence.UserManagedPersistenceContext;
 import org.ehcache.impl.persistence.DefaultLocalPersistenceService;
@@ -268,6 +269,7 @@ public class EhBackedCache implements DIHCache {
 		theCache = UserManagedCacheBuilder.newUserManagedCacheBuilder(String.class, EhCacheEntry.class)
 				.with(new UserManagedPersistenceContext<>(cacheName, persistenceService))
 				.withResourcePools(createCacheResourcePools(maxHeapMemSize, ramMaxSize, diskMaxSize))
+				.withExpiry(Expirations.noExpiration())
 				.build(true);
 
 		String pkName = CachePropertyUtil.getAttributeValueAsString(context, DIHCacheSupport.CACHE_PRIMARY_KEY);
@@ -283,13 +285,14 @@ public class EhBackedCache implements DIHCache {
 	}
 
 	private ResourcePools createCacheResourcePools(Long maxHeapEntries, Long maxOffHeapMB, Long maxDiskMB) {
-		// heap is mandatory - defaults to 1000 entries if not configured
+		// heap is mandatory - defaults to 10000 entries if not configured
 		ResourcePoolsBuilder resourcePoolsBuilder = ResourcePoolsBuilder.newResourcePoolsBuilder().heap(maxHeapEntries, EntryUnit.ENTRIES);
 
 		if (maxOffHeapMB != null) {
 			resourcePoolsBuilder = resourcePoolsBuilder.offheap(maxOffHeapMB, MemoryUnit.MB);
 		}
 
+		// disk is also mandatory and defaults to 1000 MB if not custom provided
 		return resourcePoolsBuilder.disk(maxDiskMB, MemoryUnit.MB, false).build();
 	}
 
