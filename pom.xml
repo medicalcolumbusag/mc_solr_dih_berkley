@@ -6,7 +6,7 @@
 
 	<groupId>de.medicalcolumbus.platform</groupId>
 	<artifactId>mc-solr-dih-berkley</artifactId>
-	<version>1.4.6</version>
+	<version>1.4.7</version>
 	<name>mc-solr-dih-berkley</name>
 	<packaging>jar</packaging>
 
@@ -43,7 +43,7 @@
 			<groupId>org.apache.solr</groupId>
 			<artifactId>solr-dataimporthandler</artifactId>
 			<scope>provided</scope>
-			<version>6.2.1</version>
+			<version>7.4.0</version>
 		</dependency>
 
 		<dependency>
