@@ -67,7 +67,7 @@ public class Classification {
 		int level = 1;
 
 		for (String i : classifications) {
-			StringBuilder rowValue = new StringBuilder(level++).append("_");
+			StringBuilder rowValue = new StringBuilder().append(level++).append("_");
 			for (int j = 0; j < level - 1; j++) {
 				rowValue.append(classifications[j]).append(j < level - 2 ? "," : "");
 			}
