@@ -4,9 +4,9 @@ import java.util.Map;
 
 public class ProductAttribute {
 
-	static final String ATTRIBUTE_UNIT = "attribute_unit";
-	static final String ATTRIBUTE_NAME = "attribute_name";
-	static final String ATTRIBUTE_VALUE = "attribute_value";
+	static final String ATTRIBUTE_UNIT = "ATTRIBUTE_UNIT";
+	static final String ATTRIBUTE_NAME = "ATTRIBUTE_NAME";
+	static final String ATTRIBUTE_VALUE = "ATTRIBUTE_VALUE";
 
 	public Object transformRow(Map<String, Object> row) {
 		String unit = (row.get(ATTRIBUTE_UNIT) != null) ? " " + row.get(ATTRIBUTE_UNIT) : "";

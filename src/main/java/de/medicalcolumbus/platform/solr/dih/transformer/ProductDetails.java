@@ -5,14 +5,14 @@ import java.util.Map;
 public class ProductDetails {
 
 	public Object transformRow(Map<String, Object> row) {
-		String locale = row.get("locale").toString();
+		String locale = row.get("LOCALE").toString();
 
-		addLocalizedField(row, locale, "details_name", "name");
-		addLocalizedField(row, locale, "details_original_name", "original_name");
-		addLocalizedField(row, locale, "details_short_name", "short_name");
-		addLocalizedField(row, locale, "details_original_short_name", "original_short_name");
-		addLocalizedField(row, locale, "details_description", "description");
-		addLocalizedField(row, locale, "details_original_description", "original_description");
+		addLocalizedField(row, locale, "details_name", "NAME");
+		addLocalizedField(row, locale, "details_original_name", "ORIGINAL_NAME");
+		addLocalizedField(row, locale, "details_short_name", "SHORT_NAME");
+		addLocalizedField(row, locale, "details_original_short_name", "ORIGINAL_SHORT_NAME");
+		addLocalizedField(row, locale, "details_description", "DESCRIPTION");
+		addLocalizedField(row, locale, "details_original_description", "ORIGINAL_DESCRIPTION");
 		return row;
 	}
 

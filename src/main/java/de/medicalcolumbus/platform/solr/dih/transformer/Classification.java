@@ -43,10 +43,10 @@ import java.util.Map;
  */
 public class Classification {
 
-	static final String FULL_NAME = "full_name";
-	static final String FULL_KEY = "full_key";
-	static final String SYSTEM_ID = "system_id";
-	static final String LOCALE = "locale";
+	static final String FULL_NAME = "FULL_NAME";
+	static final String FULL_KEY = "FULL_KEY";
+	static final String SYSTEM_ID = "SYSTEM_ID";
+	static final String LOCALE = "LOCALE";
 
 	public Object transformRow(Map<String, Object> row) {
 		return addComposedKey(addComposedNames(row));

@@ -4,8 +4,8 @@ import java.util.Map;
 
 public abstract class Dictionary {
 
-	static final String LANGUAGE = "language";
-	static final String VALUE = "value";
+	static final String LANGUAGE = "LANGUAGE";
+	static final String VALUE = "VALUE";
 	static final String STRING_TYPE = "_s";
 
 	public Object transformRow(Map<String, Object> row) {
