@@ -21,7 +21,6 @@ public class DIHCacheProcessor extends EntityProcessorBase {
 	private Iterator<Map<String, Object>> lastFkIterator = null;
 
 	public void destroy() {
-		cache.close();
 		cache = null;
 		lastFkValue = null;
 		lastFkIterator = null;

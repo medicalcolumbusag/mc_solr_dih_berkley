@@ -1,14 +1,12 @@
 package de.medicalcolumbus.platform.solr.dih.transformer;
 
-
 import org.apache.solr.handler.dataimport.Context;
 import org.apache.solr.handler.dataimport.Transformer;
 
 import java.util.Map;
 
-public class Barcode extends Transformer {
-
-	private static final String BARCODES_FIELD = "barcodes";
+public class BarcodePred extends Transformer {
+	private static final String BARCODES_FIELD = "barcodes_pred";
 	private static final String BARCODE_VALUE = "BARCODE";
 
 	@Override

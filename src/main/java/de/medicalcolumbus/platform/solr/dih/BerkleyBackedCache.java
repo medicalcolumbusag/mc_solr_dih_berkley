@@ -63,7 +63,7 @@ public class BerkleyBackedCache implements DIHCache {
 	private static final String CACHE_PROP_FOR_TYPES = "CACHE_TYPES";
 
 	private static final Pattern splitMetadataPattern = Pattern.compile("\\s*,\\s*");
-	private Environment env = null;
+	private BerkleyEnvironment env = null;
 	private Database db = null;
 	private boolean readOnly = false;
 	private boolean transactional = false;
@@ -247,7 +247,7 @@ public class BerkleyBackedCache implements DIHCache {
 			envConfig.setSharedCache(sharedCache);
 			envConfig.setConfigParam("je.log.fileMax", "1000000000"); // 1gb max file
 			// size
-			env = new Environment(f, envConfig);
+			env = new BerkleyEnvironment(f, envConfig);
 
 			DatabaseConfig dbConfig = new DatabaseConfig();
 			if (transactional) {
