@@ -6,7 +6,7 @@
 
 	<groupId>de.medicalcolumbus.platform</groupId>
 	<artifactId>mc-solr-dih-berkley</artifactId>
-	<version>1.4.11</version>
+	<version>1.4.12</version>
 	<name>mc-solr-dih-berkley</name>
 	<packaging>jar</packaging>
 
@@ -15,6 +15,20 @@
 	</properties>
 
 	<profiles>
+		<profile>
+			<id>artifactory</id>
+			<distributionManagement>
+				<repository>
+					<id>GHX</id>
+					<url>https://ghxrepo.jfrog.io/ghxrepo/globalcontent</url>
+				</repository>
+				<snapshotRepository>
+					<id>GHX Snapshot</id>
+					<url>https://ghxrepo.jfrog.io/ghxrepo/globalcontent-snapshot</url>
+				</snapshotRepository>
+			</distributionManagement>
+		</profile>
+
 		<profile>
 			<id>nexus-fra</id>
 			<distributionManagement>
