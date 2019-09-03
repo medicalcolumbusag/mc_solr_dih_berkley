@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings
+  xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/SETTINGS/1.0.0">
+  <servers>
+    <server>
+      <id>MC</id>
+      <username>bamboo</username>
+      <password>${password}</password>
+    </server>
+    <server>
+      <id>MC Snapshot</id>
+      <username>bamboo</username>
+      <password>${password}</password>
+    </server>
+    <server>
+      <id>GHX</id>
+      <username>bamboo</username>
+      <password>${password}</password>
+    </server>
+    <server>
+      <id>GHX Snapshot</id>
+      <username>bamboo</username>
+      <password>${password}</password>
+    </server>
+    <server>
+      <id>MC Plugins</id>
+      <username>bamboo</username>
+      <password>${password}</password>
+    </server>
+    <server>
+      <id>GHX Plugins</id>
+      <username>bamboo</username>
+      <password>${password}</password>
+    </server>
+    <server>
+      <id>GHX Plugins Snapshots</id>
+      <username>bamboo</username>
+      <password>${password}</password>
+    </server>
+  </servers>
+</settings>
